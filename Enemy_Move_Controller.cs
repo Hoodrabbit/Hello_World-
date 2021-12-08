@@ -16,6 +16,8 @@ public class Enemy_Move_Controller : MonoBehaviour
     Move_State M_S;
 
     public GameObject Player;
+    public GameObject Enemy_Prefab;
+    public GameObject Enemy;
     public Vector2 TopRight, bottomLeft;
     int XSize, YSize;
     dotted_Line Enemy_state;
@@ -27,47 +29,91 @@ public class Enemy_Move_Controller : MonoBehaviour
 
     float TTime = 0f;
 
+    LineRenderer LR_Player_check;
+
     public bool Is_Wall_right = false;
     public bool Is_Wall_up = false;
     public bool Is_Wall_down = false;
     public bool Is_Wall_left = false;
 
+    bool Time_over = false;
+    bool Start_Timer = true;
+
+    Animator animator;
     // Start is called before the first frame update
     void Start()
     {
         M_S = Move_State.None;
         Enemy_state = GetComponentInChildren<dotted_Line>();
         rigid2D = GetComponent<Rigidbody2D>();
+        LR_Player_check = GetComponent<LineRenderer>();
+        animator = GetComponent<Animator>();
+        Physics2D.IgnoreLayerCollision(6, 7);
+        Physics2D.IgnoreLayerCollision(7, 7);
     }
 
     // Update is called once per frame
     void Update()
     {
+        
+
         if(M_S == Move_State.Chasing)
         {
-            Debug.Log("플레이어 쫓고 있는 중");
+            //Debug.Log("플레이어 쫓고 있는 중");
         }
 
         if(M_S == Move_State.Wall_Checking)
         {
-            Debug.Log("근처에 벽이 있음");
+            //Debug.Log("근처에 벽이 있음");
         }
 
         if (Enemy_state.E_S == dotted_Line.Enemy_State.Enemy_Player_Chasing)
         {
-            Control_Wall_check_bool();
+            TTime += Time.deltaTime;
 
-            if(Is_Wall_check())
+            if(TTime<10)
             {
-                //Debug.Log("true");
-                Decide_Route();
-                M_S = Move_State.Wall_Checking;
+
+                //여기에 자신의 하위 오브젝트에 canvas만들고 텍스트도 복제하는 스크립트 작성하기
+                if(Start_Timer == true)
+                {
+                    Enemy = Instantiate(Enemy_Prefab);
+                    Enemy.transform.SetParent(transform);
+                    Start_Timer = false;
+                }
+                
+
+                Control_Wall_check_bool();
+                LR_Player_check.enabled = false;
+                if (Is_Wall_check())
+                {
+                    //Debug.Log("true");
+                    Decide_Route();
+                    M_S = Move_State.Wall_Checking;
+                }
+                else
+                {
+                    //Debug.Log("false");
+                    Chasing_player();
+                    M_S = Move_State.Chasing;
+                }
             }
-            else
+
+            if(TTime >=10)
             {
-                //Debug.Log("false");
-                Chasing_player();
-                M_S = Move_State.Chasing;
+                
+                //Debug.Log("왜 안될까");
+                Time_over = true;
+            }
+
+            if(Time_over == true)
+            {
+                rigid2D.velocity = Vector2.zero;
+                Enemy_state.E_S = dotted_Line.Enemy_State.Enemy_Return_Start_Pos;
+                Enemy_state.Find_player = false;
+                Enemy_state.Go_Back = false;
+                Time_over = false;
+                TTime = 0;
             }
             
         }
@@ -109,42 +155,7 @@ public class Enemy_Move_Controller : MonoBehaviour
 
     }
 
-    bool Is_Enemy_Moving()//여기에서 플레이어 멈추도록 만들어주는데 이걸 다르게 변경 시켜줘야 함
-    {
-        TTime += Time.deltaTime;
-
-        if (TTime < 1f)
-        {
-            NowPos = transform.position;
-        }
-
-        if (TTime > 3)
-        {
-            if (Vector2.Distance(NowPos, transform.position) < 2)
-            {
-                //if (Is_Wall_right == false)
-                //{
-                //    //Wall_check_Right();
-                //}
-                //if (Is_Wall_down == false)
-                //{
-                //    //Wall_check_Down();
-                //}
-                //if (Is_Wall_up == false)
-                //{
-                //   // Wall_check_Up();
-                //}
-                //if (Is_Wall_left == false)
-                //{
-                //    //Wall_check_Left();
-                //}
-                return false;
-                
-            }
-        }
-
-        return true;
-    }
+    
 
     int Distance_Check(bool right, bool left, bool up, bool down)
     {
@@ -186,24 +197,27 @@ public class Enemy_Move_Controller : MonoBehaviour
     void Decide_Route()
     {
         int number = Distance_Check(Is_Wall_right, Is_Wall_left, Is_Wall_up, Is_Wall_down);
-        Debug.Log(number);
+        //Debug.Log(number);
         switch (number)
         {
             case 1:
                 {
                     rigid2D.velocity = Vector2.right * 2f;
+                    animator.SetInteger("Direction", 2);
                     //오른쪽 이동
                     break;
                 }
             case 2:
                 {
                     rigid2D.velocity = Vector2.left * 2f;
+                    animator.SetInteger("Direction", 3);
                     //왼쪽 이동
                     break;
                 }
             case 3:
                 {
                     rigid2D.velocity = Vector2.up * 2f;
+                    animator.SetInteger("Direction", 0);
                     //위쪽 이동
                     break;
                 }
@@ -211,6 +225,7 @@ public class Enemy_Move_Controller : MonoBehaviour
             case 4:
                 {
                     rigid2D.velocity = Vector2.down * 2f;
+                    animator.SetInteger("Direction", 1);
                     //아래쪽 이동
                     break;
                 }
@@ -225,6 +240,25 @@ public class Enemy_Move_Controller : MonoBehaviour
     void Chasing_player()
     {
         transform.position = Vector2.MoveTowards(transform.position, Player.transform.position, Time.deltaTime *2f);
+
+        if(Player.transform.position.x > transform.position.x)
+        {
+            animator.SetInteger("Direction", 2);
+        }
+        else
+        {
+            animator.SetInteger("Direction", 3);
+        }
+
+        if(Player.transform.position.y > transform.position.y)
+        {
+            animator.SetInteger("Direction", 0);
+        }
+        else
+        {
+            animator.SetInteger("Direction", 1);
+        }
+
     }
 
     void Wall_check_Right()//타일맵 콜라이더에 막혀서 이동하지 못하는 경우에 발동시켜줄 함수 
@@ -300,35 +334,10 @@ public class Enemy_Move_Controller : MonoBehaviour
 
     }
 
+    public float TTime_Value()
+    {
+        return TTime;
+    }
+
+
 }
-//void ray()
-//{
-//    test = Physics2D.OverlapCircleAll(transform.position, 100f);
-//    //Debug.Log(Wall_check);
-
-//    XSize = (int)(TopRight.x - bottomLeft.x);
-//    YSize = (int)(TopRight.y - bottomLeft.y);
-
-//    wall_Pos = new Wall_pos[XSize, YSize];
-
-//    for(int i = 0; i<XSize; i++)
-//    {
-//        for(int j=0; j<YSize; j++)
-//        {
-//            foreach (Collider2D col in Physics2D.OverlapCircleAll(new Vector2(i + bottomLeft.x, j + bottomLeft.y), 0.4f))
-//            {
-//                if (col.gameObject.layer == LayerMask.NameToLayer("Wall"))
-//                {
-//                    isWall = true;
-//                    wall_Pos[i, j] = new Wall_pos((int)(i + bottomLeft.x), (int)(j + bottomLeft.y));
-
-//                    //wall_Pos[i, j].Show_x_y();
-//                }
-//            }
-
-//        }
-
-//    }
-
-
-//}

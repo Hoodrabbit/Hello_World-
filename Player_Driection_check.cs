@@ -25,9 +25,8 @@ public class Player_Driection_check : MonoBehaviour
 
     BoxCollider2D B2D;
 
-    Rigidbody2D Box_rigid;
+    public Rigidbody2D Box_rigid;
     GameObject SomethingInGameObject;
-    public Text space_on;
    
     public bool SomethingIn = false;
     
@@ -37,7 +36,6 @@ public class Player_Driection_check : MonoBehaviour
     void Start()
     {
         B2D = GetComponent<BoxCollider2D>();
-        space_on.gameObject.SetActive(false);
         //Parent_transform = GetComponentInParent<Transform>();
     }
 
@@ -47,7 +45,6 @@ public class Player_Driection_check : MonoBehaviour
         if (SomethingIn == true && Input.GetKeyDown(KeyCode.Space))
         {
            // Debug.Log("¿Ö ¾ÈµÊ");
-            space_on.gameObject.SetActive(true);
             P_S = Player_State.Pick_UP_Box;
             //Debug.Log("¿Ö ¾ÈµÊ_2");
         }
